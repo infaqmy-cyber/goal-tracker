@@ -1,12 +1,11 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); /* CRITICAL: The app will break without this line */
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
 
 export enum OperationType {
   CREATE = 'create',
@@ -55,21 +54,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-export async function loginWithGoogle() {
+// Test connection on boot as specified in the Firebase Skill
+export async function testConnection(): Promise<void> {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
+    await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
-    console.error("Gagal log masuk Google:", error);
-    throw error;
-  }
-}
-
-export async function logoutUser() {
-  try {
-    await signOut(auth);
-  } catch (error) {
-    console.error("Gagal log keluar:", error);
-    throw error;
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn("Please check your Firebase configuration or network status.");
+    }
   }
 }
